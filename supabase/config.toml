@@ -1,0 +1,7 @@
+project_id = "dfjujizzlncgrtsypszg"
+
+[functions.create-pix-charge]
+verify_jwt = false
+
+[functions.fastsoft-webhook]
+verify_jwt = false

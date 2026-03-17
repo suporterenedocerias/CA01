@@ -1,0 +1,61 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+
+            APP_DIR="${{ secrets.APP_DIR || '/opt/cacambaja' }}"
+            cd "$APP_DIR"
+
+            echo ">> Pulling latest code..."
+            git pull origin main
+
+            echo ">> Building and restarting containers..."
+            docker compose build --no-cache
+            docker compose up -d
+
+            echo ">> Waiting for API health check..."
+            sleep 10
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:3001/api/health > /dev/null 2>&1; then
+                echo "✅ API healthy!"
+                break
+              fi
+              if [ "$i" -eq 10 ]; then
+                echo "❌ API health check failed after 10 attempts"
+                docker compose logs api --tail 30
+                exit 1
+              fi
+              echo "Attempt $i/10 — waiting..."
+              sleep 5
+            done
+
+            echo ">> Cleaning up old images..."
+            docker image prune -f
+
+            echo "✅ Deploy completed successfully!"

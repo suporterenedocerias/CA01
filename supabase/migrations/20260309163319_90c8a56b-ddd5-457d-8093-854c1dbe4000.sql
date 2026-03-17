@@ -1,0 +1,1 @@
+UPDATE whatsapp_numbers SET active = false WHERE number IN ('5511999999902', '5511999999903');
