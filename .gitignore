@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# GitHub Actions — push exige token com scope "workflow"; deploy é na VPS
+.github/workflows/
+
 # Segredos — nunca commitar
 .env
 api/.env
