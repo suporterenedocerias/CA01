@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   Settings,
+  Tag,
 } from 'lucide-react';
 import logoIcon from '@/assets/logo-icon.png';
 
@@ -20,6 +21,7 @@ const menuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
   { label: 'Leads / Pedidos', icon: Users, path: '/admin/leads' },
   { label: 'Pedidos PIX', icon: ShoppingCart, path: '/admin/orders' },
+  { label: 'Ofertas', icon: Tag, path: '/admin/offers' },
   { label: 'Tamanhos', icon: Package, path: '/admin/sizes' },
   { label: 'WhatsApp', icon: MessageCircle, path: '/admin/whatsapp' },
   { label: 'Contadores', icon: BarChart3, path: '/admin/counters' },
@@ -33,21 +35,33 @@ export function AdminLayout({ children, title }: { children: ReactNode; title: s
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/admin');
+    let cancelled = false;
+
+    async function resolveSession(): Promise<boolean> {
+      for (let i = 0; i < 4; i++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) return true;
+        if (i < 3) await new Promise((r) => setTimeout(r, 200));
       }
+      return false;
+    }
+
+    (async () => {
+      const ok = await resolveSession();
+      if (cancelled) return;
+      if (!ok) navigate('/admin', { replace: true });
       setChecking(false);
-    };
+    })();
 
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) navigate('/admin');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
+      if (event === 'SIGNED_OUT') navigate('/admin', { replace: true });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {

@@ -1,6 +1,7 @@
 import { SiteHeader } from '@/components/landing/SiteHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
+import { OffersSection } from '@/components/landing/OffersSection';
 import { SizesSection } from '@/components/landing/SizesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { TrackingSection } from '@/components/landing/TrackingSection';
@@ -18,6 +19,7 @@ const Index = () => {
       <SiteHeader />
       <HeroSection />
       <BenefitsSection />
+      <OffersSection />
       <SizesSection />
       <HowItWorksSection />
       <TrackingSection />

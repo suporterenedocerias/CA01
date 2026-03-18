@@ -15,6 +15,7 @@ const AdminLogin = lazy(() => import("./pages/admin/AdminLogin.tsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
 const AdminLeads = lazy(() => import("./pages/admin/AdminLeads.tsx"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders.tsx"));
+const AdminOffers = lazy(() => import("./pages/admin/AdminOffers.tsx"));
 const AdminSizes = lazy(() => import("./pages/admin/AdminSizes.tsx"));
 const AdminWhatsApp = lazy(() => import("./pages/admin/AdminWhatsApp.tsx"));
 const AdminCounters = lazy(() => import("./pages/admin/AdminCounters.tsx"));
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/leads" element={<AdminLeads />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/offers" element={<AdminOffers />} />
               <Route path="/admin/sizes" element={<AdminSizes />} />
               <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
               <Route path="/admin/counters" element={<AdminCounters />} />

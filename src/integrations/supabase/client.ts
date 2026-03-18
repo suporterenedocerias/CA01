@@ -15,6 +15,7 @@ function getSupabaseConfig(): { url: string; key: string } {
     "";
   const key =
     (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
     w?.supabaseAnonKey ||
     "";
   return { url, key };
@@ -32,9 +33,20 @@ export const supabase = createClient<Database>(
   SUPABASE_URL || "https://placeholder.supabase.co",
   SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.invalid",
   {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
+);
+
+/** Front configurado com projeto Supabase real (não placeholder) */
+export function isSupabaseClientConfigured(): boolean {
+  const u = SUPABASE_URL || "";
+  const k = SUPABASE_PUBLISHABLE_KEY || "";
+  return Boolean(
+    u && k && !u.includes("placeholder.supabase.co") && k.length > 40,
+  );
+}

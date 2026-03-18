@@ -25,7 +25,15 @@ for (const line of text.split("\n")) {
   vars[k] = v;
 }
 const url = vars.VITE_SUPABASE_URL || "";
-const key = vars.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const key =
+  vars.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  vars.VITE_SUPABASE_ANON_KEY ||
+  "";
+if (!url || !key) {
+  console.error(
+    "Falta VITE_SUPABASE_URL e uma chave: VITE_SUPABASE_PUBLISHABLE_KEY ou VITE_SUPABASE_ANON_KEY",
+  );
+}
 const payload = JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key });
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, `window.__CACAMBAJA_ENV__=${payload};`, "utf8");

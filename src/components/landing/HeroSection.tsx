@@ -108,7 +108,11 @@ export function HeroSection() {
               </a>
             )}
             <a href="#tamanhos">
-              <Button variant="heroOutline" size="xl" className="w-full sm:w-auto border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+              <Button
+                variant="outline"
+                size="xl"
+                className="w-full sm:w-auto border-2 border-white/90 bg-white/95 text-slate-900 shadow-lg font-semibold hover:bg-white hover:text-slate-900 dark:border-white/90 dark:bg-white/95 dark:text-slate-900"
+              >
                 Ver tamanhos e preços
               </Button>
             </a>

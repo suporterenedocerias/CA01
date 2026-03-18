@@ -21,6 +21,7 @@ export function SiteFooter() {
             <h4 className="font-display font-bold text-primary-foreground mb-4">Links</h4>
             <ul className="space-y-2 text-sm">
               <li><a href="#beneficios" className="text-primary-foreground/60 hover:text-accent transition-colors">Benefícios</a></li>
+              <li><a href="#ofertas" className="text-primary-foreground/60 hover:text-accent transition-colors">Ofertas</a></li>
               <li><a href="#tamanhos" className="text-primary-foreground/60 hover:text-accent transition-colors">Tamanhos e Preços</a></li>
               <li><a href="#como-funciona" className="text-primary-foreground/60 hover:text-accent transition-colors">Como Funciona</a></li>
               <li><a href="#contato" className="text-primary-foreground/60 hover:text-accent transition-colors">Contato</a></li>

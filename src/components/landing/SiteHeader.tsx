@@ -6,6 +6,7 @@ import logoIcon from '@/assets/logo-icon.png';
 
 const navLinks = [
   { label: 'Benefícios', href: '#beneficios' },
+  { label: 'Ofertas', href: '#ofertas' },
   { label: 'Tamanhos', href: '#tamanhos' },
   { label: 'Como Funciona', href: '#como-funciona' },
   { label: 'Contato', href: '#contato' },

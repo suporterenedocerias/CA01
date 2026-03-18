@@ -272,6 +272,45 @@ export type Database = {
         }
         Relationships: []
       }
+      site_offers: {
+        Row: {
+          active: boolean
+          badge: string
+          created_at: string
+          description: string
+          id: string
+          order_index: number
+          price_current: number
+          price_original: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge?: string
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          price_current?: number
+          price_original?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge?: string
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          price_current?: number
+          price_original?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string
