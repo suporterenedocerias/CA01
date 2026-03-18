@@ -29,6 +29,13 @@ npm install && npm run build
 echo ">> 4) Copiar para wwwroot do domínio"
 rsync -a --exclude='.user.ini' "$APP/dist/" /www/wwwroot/pedircacamba.com/
 
+echo ">> 4b) env.js (Supabase no browser — lê .env sem precisar rebuild)"
+if [[ -f "$APP/.env" ]]; then
+  node "$APP/deploy/write-env-js.mjs" "$APP/.env" /www/wwwroot/pedircacamba.com/env.js
+else
+  echo "AVISO: sem $APP/.env — cria com VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY"
+fi
+
 echo ">> 5) Teste local"
 PORT=$(grep -E '^[[:space:]]*PORT=' "$APP/api/.env" 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' \r"'"'" || echo "3000")
 curl -s -m 3 "http://127.0.0.1:${PORT}/api/health" && echo "" || true

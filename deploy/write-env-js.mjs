@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+/**
+ * Gera env.js na pasta do site (wwwroot) a partir do .env do projeto.
+ * Uso: node deploy/write-env-js.mjs /var/www/pedircacamba/.env /www/wwwroot/pedircacamba.com/env.js
+ */
+import fs from "fs";
+import path from "path";
+const envPath = process.argv[2] || ".env";
+const outPath = process.argv[3] || "dist/env.js";
+if (!fs.existsSync(envPath)) {
+  console.error("Ficheiro .env não encontrado:", envPath);
+  process.exit(1);
+}
+const text = fs.readFileSync(envPath, "utf8");
+const vars = {};
+for (const line of text.split("\n")) {
+  const t = line.trim();
+  if (!t || t.startsWith("#")) continue;
+  const i = t.indexOf("=");
+  if (i < 1) continue;
+  const k = t.slice(0, i).trim();
+  let v = t.slice(i + 1).trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))
+    v = v.slice(1, -1);
+  vars[k] = v;
+}
+const url = vars.VITE_SUPABASE_URL || "";
+const key = vars.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const payload = JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key });
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
+fs.writeFileSync(outPath, `window.__CACAMBAJA_ENV__=${payload};`, "utf8");
+console.log("OK:", outPath, url ? "(com URL)" : "(URL vazia — verifica .env)");
