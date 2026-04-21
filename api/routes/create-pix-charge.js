@@ -8,6 +8,7 @@ async function createPixCharge(req, res) {
       nome, whatsapp, email, cpf_cnpj, cep, endereco, numero,
       complemento, bairro, cidade, estado, tamanho, quantidade,
       valor_unitario, observacoes, page_slug, whatsapp_number_id,
+      custom_page_slug,
     } = req.body;
 
     // Validação
@@ -21,13 +22,31 @@ async function createPixCharge(req, res) {
     const valor_total = valor_unitario * qtd;
     const amount = Math.round(valor_total * 100); // centavos
 
-    const FASTSOFT_SECRET_KEY = process.env.FASTSOFT_SECRET_KEY;
-    if (!FASTSOFT_SECRET_KEY) {
+    // Buscar gateway da página customizada (se informado)
+    let fastsoftKey = process.env.FASTSOFT_SECRET_KEY;
+    if (custom_page_slug) {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data: pageGw } = await supabaseAdmin
+          .from('custom_pages')
+          .select('gateway_type, gateway_sk')
+          .eq('slug', String(custom_page_slug).trim())
+          .maybeSingle();
+        if (pageGw?.gateway_sk) {
+          fastsoftKey = pageGw.gateway_sk;
+          console.log(`[gateway] usando chave da página "${custom_page_slug}"`);
+        }
+      } catch (e) {
+        console.warn('[gateway] erro ao buscar config da página:', e.message);
+      }
+    }
+
+    if (!fastsoftKey) {
       throw new Error('FASTSOFT_SECRET_KEY not configured');
     }
 
     // FastSoft Basic Auth: base64("x:<secret_key>")
-    const tokenBase64 = Buffer.from(`x:${FASTSOFT_SECRET_KEY}`).toString('base64');
+    const tokenBase64 = Buffer.from(`x:${fastsoftKey}`).toString('base64');
 
     // Ref única do pedido
     const orderRef = crypto.randomUUID().slice(0, 8);
@@ -145,7 +164,9 @@ async function createPixCharge(req, res) {
     // Salvar pedido no banco
     const supabase = getSupabaseAdmin();
 
-    const slug = page_slug ? String(page_slug).trim().slice(0, 80) : null;
+    const slug = custom_page_slug
+      ? String(custom_page_slug).trim().slice(0, 80)
+      : page_slug ? String(page_slug).trim().slice(0, 80) : null;
 
     let resolvedWhatsappNumberId = null;
     const widRaw = whatsapp_number_id != null ? String(whatsapp_number_id).trim() : '';

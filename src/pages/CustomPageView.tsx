@@ -59,7 +59,7 @@ export default function CustomPageView({ slug, page: pageProp }: Props) {
 
   if (missing || !page) return <NotFound />;
 
-  const ctaHref = page.cta_url || '/checkout';
+  const ctaHref = page.cta_url || `/p/${page.slug}/checkout`;
   const ctaLabel = page.cta_label || 'Pedir caçamba agora';
 
   return (

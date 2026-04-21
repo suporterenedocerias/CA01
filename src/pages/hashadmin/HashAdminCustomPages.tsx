@@ -20,6 +20,9 @@ type CustomPage = {
   seo_description: string | null;
   custom_domain: string | null;
   active: boolean;
+  gateway_type: string | null;
+  gateway_pk: string | null;
+  gateway_sk: string | null;
   isNew?: boolean;
 };
 
@@ -29,11 +32,14 @@ const EMPTY_PAGE: Omit<CustomPage, 'id'> = {
   subtitle: '',
   body: '',
   cta_label: 'Pedir caçamba agora',
-  cta_url: '/checkout',
+  cta_url: '',
   seo_title: '',
   seo_description: '',
   custom_domain: '',
   active: true,
+  gateway_type: 'fastsoft',
+  gateway_pk: '',
+  gateway_sk: '',
 };
 
 function slugify(text: string) {
@@ -206,6 +212,48 @@ function PageEditor({
             Página ativa (visível publicamente)
           </label>
         </div>
+
+        {/* Gateway de pagamento */}
+        <div className="sm:col-span-2 rounded-lg border border-zinc-700 bg-zinc-950/60 p-4 space-y-3">
+          <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">Gateway de pagamento</p>
+          <p className="text-xs text-zinc-500">
+            Checkout desta página: <span className="font-mono text-zinc-400">{siteOrigin}/p/{form.slug || '[slug]'}/checkout</span>
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Gateway</label>
+              <select
+                className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                value={form.gateway_type ?? 'fastsoft'}
+                onChange={(e) => set('gateway_type', e.target.value)}
+              >
+                <option value="fastsoft">FastSoft / Fluxxopay</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Chave pública (PK)</label>
+              <Input
+                className="border-zinc-700 bg-zinc-950 font-mono text-zinc-100 text-xs"
+                placeholder="pk_..."
+                value={form.gateway_pk ?? ''}
+                onChange={(e) => set('gateway_pk', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Chave secreta (SK) ⚠️</label>
+              <Input
+                className="border-zinc-700 bg-zinc-950 font-mono text-zinc-100 text-xs"
+                placeholder="sk_... (nunca exposta ao visitante)"
+                type="password"
+                value={form.gateway_sk ?? ''}
+                onChange={(e) => set('gateway_sk', e.target.value)}
+              />
+            </div>
+          </div>
+          {!form.gateway_sk && (
+            <p className="text-xs text-amber-400">⚠️ Sem SK configurada, o checkout usará a chave global do servidor.</p>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 border-t border-zinc-800 pt-4">
@@ -274,12 +322,19 @@ function CustomPagesBlock({ inst }: { inst: HashAdminInstance }) {
       seo_description: page.seo_description || null,
       custom_domain: page.custom_domain || null,
       active: page.active,
+      gateway_type: page.gateway_type || 'fastsoft',
+      gateway_pk: page.gateway_pk || null,
+      gateway_sk: page.gateway_sk || null,
     };
     const { error } = page.isNew
       ? await writeClient.from('custom_pages').insert({ ...payload, id: page.id })
       : await writeClient.from('custom_pages').update(payload).eq('id', page.id);
     if (error) {
-      toast.error(error.message);
+      if (error.code === '23505' || (error as any).status === 409) {
+        toast.error(`Já existe uma página com o slug "${payload.slug}". Escolha outro slug.`);
+      } else {
+        toast.error(error.message);
+      }
     } else {
       toast.success('Página salva!');
       setEditing(null);

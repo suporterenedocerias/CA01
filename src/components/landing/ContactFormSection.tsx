@@ -26,7 +26,11 @@ function defaultOptionsFromBrief(): DumpsterOption[] {
   }));
 }
 
-export function ContactFormSection() {
+interface ContactFormSectionProps {
+  pageSlug?: string;
+}
+
+export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
   const navigate = useNavigate();
   const { getWhatsAppUrl, trackClick, available, assignedNumberId } = useWhatsApp();
   const { slug } = useStatePage();
@@ -143,6 +147,7 @@ export function ContactFormSection() {
         valor_unitario: selectedPrice,
         observacoes: form.observacoes.trim() || null,
         page_slug: slug || null,
+        custom_page_slug: pageSlug || null,
       });
 
       navigate(`/pagamento/${data.order_id}`);
