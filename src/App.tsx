@@ -31,9 +31,11 @@ const AdminRegions = lazy(() => import("./pages/admin/AdminRegions.tsx"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings.tsx"));
 const AdminTraffic = lazy(() => import("./pages/admin/AdminTraffic.tsx"));
 const AdminGatewayFees = lazy(() => import("./pages/admin/AdminGatewayFees.tsx"));
+const AdminCustomPages = lazy(() => import("./pages/admin/AdminCustomPages.tsx"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin.tsx"));
 const StateLanding = lazy(() => import("./pages/StateLanding.tsx"));
 const Checkout = lazy(() => import("./pages/Checkout.tsx"));
+const CustomPageCheckout = lazy(() => import("./pages/CustomPageCheckout.tsx"));
 const HashAdminHome = lazy(() => import("./pages/hashadmin/HashAdminHome.tsx"));
 const HashAdminDashboard = lazy(() => import("./pages/hashadmin/HashAdminDashboard.tsx"));
 const HashAdminOffers = lazy(() => import("./pages/hashadmin/HashAdminOffers.tsx"));
@@ -95,6 +97,7 @@ const App = () => (
               <Route path="/e/:slug/checkout" element={<Checkout />} />
               <Route path="/e/:slug" element={<StateLanding />} />
               <Route path="/p/:slug" element={<CustomPageView />} />
+              <Route path="/p/:slug/checkout" element={<CustomPageCheckout />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/pagamento/:orderId" element={<Payment />} />
               <Route path="/pagamento-confirmado/:orderId" element={<PaymentConfirmed />} />
@@ -112,6 +115,7 @@ const App = () => (
               <Route path="/admin/state-pages" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin/traffic" element={<AdminTraffic />} />
               <Route path="/admin/gateway-fees" element={<AdminGatewayFees />} />
+              <Route path="/admin/custom-pages" element={<AdminCustomPages />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/hashadmin/*" element={<HashAdminLegacyRedirect />} />
               <Route path={HASHADMIN_LOGIN_PATH} element={<HashAdminLogin />} />

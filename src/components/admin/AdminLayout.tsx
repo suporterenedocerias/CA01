@@ -17,6 +17,7 @@ import {
   UserCog,
   TrendingUp,
   Landmark,
+  FileText,
 } from 'lucide-react';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -37,6 +38,7 @@ const menuSections = [
     items: [
       { label: 'Tamanhos', icon: Package, path: '/admin/sizes' },
       { label: 'Ofertas', icon: Tag, path: '/admin/offers' },
+      { label: 'Páginas', icon: FileText, path: '/admin/custom-pages' },
     ],
   },
   {
