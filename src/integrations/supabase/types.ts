@@ -66,6 +66,7 @@ export type Database = {
           numero: string | null
           numero_atribuido: string | null
           observacoes: string | null
+          page_slug: string | null
           quantidade: number
           status: string
           tamanho: string
@@ -87,6 +88,7 @@ export type Database = {
           numero?: string | null
           numero_atribuido?: string | null
           observacoes?: string | null
+          page_slug?: string | null
           quantidade?: number
           status?: string
           tamanho: string
@@ -108,6 +110,7 @@ export type Database = {
           numero?: string | null
           numero_atribuido?: string | null
           observacoes?: string | null
+          page_slug?: string | null
           quantidade?: number
           status?: string
           tamanho?: string
@@ -134,6 +137,7 @@ export type Database = {
           nome: string
           numero: string | null
           observacoes: string | null
+          page_slug: string | null
           paid_at: string | null
           payment_status: string
           pix_copy_paste: string | null
@@ -147,6 +151,7 @@ export type Database = {
           valor_total: number
           valor_unitario: number
           whatsapp: string
+          whatsapp_number_id: string | null
         }
         Insert: {
           bairro?: string | null
@@ -165,6 +170,7 @@ export type Database = {
           nome: string
           numero?: string | null
           observacoes?: string | null
+          page_slug?: string | null
           paid_at?: string | null
           payment_status?: string
           pix_copy_paste?: string | null
@@ -178,6 +184,7 @@ export type Database = {
           valor_total?: number
           valor_unitario?: number
           whatsapp: string
+          whatsapp_number_id?: string | null
         }
         Update: {
           bairro?: string | null
@@ -196,6 +203,7 @@ export type Database = {
           nome?: string
           numero?: string | null
           observacoes?: string | null
+          page_slug?: string | null
           paid_at?: string | null
           payment_status?: string
           pix_copy_paste?: string | null
@@ -209,6 +217,48 @@ export type Database = {
           valor_total?: number
           valor_unitario?: number
           whatsapp?: string
+          whatsapp_number_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_whatsapp_number_id_fkey"
+            columns: ["whatsapp_number_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      state_pages: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          slug: string
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          slug: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          slug?: string
+          uf?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -311,6 +361,44 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_task_requests: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          title: string
+          details: string
+          site_offer_id: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title: string
+          details?: string
+          site_offer_id?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title?: string
+          details?: string
+          site_offer_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'partner_task_requests_site_offer_id_fkey'
+            columns: ['site_offer_id']
+            isOneToOne: false
+            referencedRelation: 'site_offers'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       site_settings: {
         Row: {
           created_at: string
@@ -321,7 +409,9 @@ export type Database = {
           site_name: string
           telefone_principal: string | null
           updated_at: string
+          whatsapp_new_visitor_seq: number
           whatsapp_principal: string | null
+          whatsapp_rotate_every: number
         }
         Insert: {
           created_at?: string
@@ -332,7 +422,9 @@ export type Database = {
           site_name?: string
           telefone_principal?: string | null
           updated_at?: string
+          whatsapp_new_visitor_seq?: number
           whatsapp_principal?: string | null
+          whatsapp_rotate_every?: number
         }
         Update: {
           created_at?: string
@@ -343,7 +435,9 @@ export type Database = {
           site_name?: string
           telefone_principal?: string | null
           updated_at?: string
+          whatsapp_new_visitor_seq?: number
           whatsapp_principal?: string | null
+          whatsapp_rotate_every?: number
         }
         Relationships: []
       }

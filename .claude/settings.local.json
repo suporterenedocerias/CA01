@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm --version)",
+      "Read(//c/Users/alexm/Downloads/marketplaces/**)",
+      "WebFetch(domain:images.unsplash.com)",
+      "WebFetch(domain:pexels.com)",
+      "WebFetch(domain:www.pexels.com)"
+    ]
+  }
+}

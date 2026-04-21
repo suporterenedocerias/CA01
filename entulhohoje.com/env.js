@@ -1,0 +1,1 @@
+window.__CACAMBAJA_ENV__={"supabaseUrl":"https://vnruueavspmgcsvvxfas.supabase.co","supabaseAnonKey":"sb_publishable_GHSy5pw-Sh_tKGJCj3ZiAg_0N7YoLoq","hashadminServiceRoleKey":"sb_secret_wJWv0zH3tvXm6Kr_aEsM_A_czYkGX-w"};

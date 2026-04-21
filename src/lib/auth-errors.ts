@@ -2,13 +2,16 @@
 export function mapSupabaseAuthError(message: string, httpStatus?: number): string {
   if (httpStatus === 422) {
     return (
-      'Login recusado (422). Tente: (1) confirme e-mail e senha; redefina no Supabase → Users → Reset password, ou no PC: npm run create-admin -- admin@email.com "SuaSenha". ' +
+      'Login recusado (422). Tente: (1) confirme utilizador/senha; redefina no Supabase → Users → Reset password, ou no PC: npm run create-admin -- admin@entulhohoje.com "SuaSenha". ' +
       '(2) Se em Authentication → Attack Protection / CAPTCHA estiver proteção no sign-in, desligue-a — o painel não envia captcha e o servidor devolve 422.'
     );
   }
   const m = (message || '').toLowerCase();
   if (m.includes('invalid login credentials') || m.includes('invalid_credentials') || m.includes('invalid_grant')) {
-    return 'E-mail ou senha incorretos — ou o utilizador não existe neste projeto Supabase. Crie o user em Authentication → Users ou redefina a senha.';
+    return (
+      'E-mail ou senha incorretos — ou o utilizador não existe neste projeto. Confirme no painel o e-mail enviado ao Supabase; se criou a conta com outro e-mail, use-o por completo. ' +
+      'No Supabase: Authentication → Users → redefinir senha, ou no PC: npm run create-admin -- admin@entulhohoje.com NovaSenha (com api/.env e service role).'
+    );
   }
   if (m.includes('signup') && m.includes('disabled')) {
     return 'Login por email desligado. Authentication → Providers → Email → ative.';

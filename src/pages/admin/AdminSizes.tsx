@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,23 @@ export default function AdminSizes() {
   const [sizes, setSizes] = useState<DumpsterSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  const handleDragStart = (id: string) => setDraggedId(id);
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+    const fromIdx = sizes.findIndex((s) => s.id === draggedId);
+    const toIdx = sizes.findIndex((s) => s.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const reordered = [...sizes];
+    const [item] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, item);
+    setSizes(reordered);
+  };
+
+  const handleDragEnd = () => setDraggedId(null);
 
   useEffect(() => {
     async function fetch() {
@@ -86,9 +103,16 @@ export default function AdminSizes() {
     <AdminLayout title="Tamanhos de Caçamba">
       <div className="space-y-4">
         {sizes.map((size) => (
-          <div key={size.id} className="p-4 rounded-xl bg-card border shadow-sm">
+          <div
+            key={size.id}
+            draggable
+            onDragStart={() => handleDragStart(size.id)}
+            onDragOver={(e) => handleDragOver(e, size.id)}
+            onDragEnd={handleDragEnd}
+            className={`p-4 rounded-xl bg-card border shadow-sm transition-opacity ${draggedId === size.id ? 'opacity-40' : 'opacity-100'}`}
+          >
             <div className="flex items-start gap-4">
-              <GripVertical className="text-muted-foreground mt-3 cursor-grab shrink-0" size={20} />
+              <GripVertical className="text-muted-foreground mt-3 cursor-grab shrink-0 select-none" size={20} />
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Input placeholder="Tamanho (ex: 5m³)" value={size.size}
                   onChange={(e) => updateField(size.id, 'size', e.target.value)} />

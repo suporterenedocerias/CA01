@@ -33,7 +33,7 @@ const { url: SUPABASE_URL, key: SUPABASE_PUBLISHABLE_KEY } = getSupabaseConfig()
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   console.error(
-    "[CaçambaJá] Falta Supabase: faça npm run build com .env (VITE_*) ou coloque env.js no site — node deploy/write-env-js.mjs"
+    "[Entulho Hoje] Falta Supabase: faça npm run build com .env (VITE_*) ou coloque env.js no site — node deploy/write-env-js.mjs"
   );
 }
 

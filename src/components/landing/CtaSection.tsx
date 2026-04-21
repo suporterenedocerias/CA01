@@ -1,36 +1,54 @@
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWhatsApp } from '@/contexts/WhatsAppContext';
 import { AnimateOnScroll } from '@/components/ui/animate-on-scroll';
+
+const bullets = ['Resposta rápida', 'Preço transparente', 'Entrega no mesmo dia'];
 
 export function CtaSection() {
   const { getWhatsAppUrl, trackClick, available } = useWhatsApp();
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-br from-primary via-primary to-primary/90 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-accent rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-accent rounded-full blur-3xl" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary via-emerald-900 to-primary py-20 md:py-28">
+      <div className="absolute inset-0 opacity-[0.12]">
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-accent blur-3xl" />
       </div>
 
       <div className="container relative z-10">
-        <AnimateOnScroll className="text-center max-w-3xl mx-auto">
-          <h2 className="font-display text-3xl md:text-5xl font-extrabold text-primary-foreground mb-6 text-balance">
-            Precisa de uma caçamba?<br />
-            <span className="text-accent">Peça agora mesmo!</span>
+        <AnimateOnScroll className="mx-auto max-w-3xl text-center">
+          <span className="text-sm font-semibold uppercase tracking-wider text-primary-foreground/80">Contato</span>
+          <h2 className="mt-3 font-display text-3xl font-extrabold text-balance text-primary-foreground md:text-5xl">
+            Precisa de caçamba agora?
           </h2>
-          <p className="text-lg text-primary-foreground/70 mb-10 max-w-xl mx-auto">
-            Entrega rápida, preço justo e atendimento humanizado. Solicite pelo WhatsApp e receba sua caçamba hoje.
+          <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/80">
+            Fale conosco e combine entrega no prazo que você precisa.
           </p>
+
+          <ul className="mx-auto mt-8 flex flex-col items-center gap-2 text-primary-foreground/90 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6">
+            {bullets.map((b) => (
+              <li key={b} className="flex items-center gap-2 text-sm font-medium md:text-base">
+                <Check className="h-5 w-5 shrink-0 text-accent" strokeWidth={2.5} />
+                {b}
+              </li>
+            ))}
+          </ul>
+
           {available ? (
-            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" onClick={trackClick}>
-              <Button variant="whatsapp" size="xl" className="text-lg px-12">
+            <a
+              className="mt-10 inline-block"
+              href={getWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={trackClick}
+            >
+              <Button variant="whatsapp" size="xl" className="px-12 text-lg">
                 <MessageCircle className="mr-2" size={22} />
-                Solicitar Caçamba no WhatsApp
+                Solicitar agora
               </Button>
             </a>
           ) : (
-            <p className="text-primary-foreground/60 text-sm">WhatsApp indisponível no momento.</p>
+            <p className="mt-6 text-sm text-primary-foreground/60">WhatsApp indisponível no momento.</p>
           )}
         </AnimateOnScroll>
       </div>

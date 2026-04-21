@@ -1,6 +1,6 @@
-# API Backend — CaçambaJá (Express/Node.js)
+# API Backend — Entulho Hoje (Express / Node.js)
 
-API substituta das Edge Functions do Supabase para rodar em VPS própria.
+Substitui as Edge Functions do Supabase quando a API corre na VPS. **Pagamentos:** Fluxxopay usa a API **FastSoft** (`https://api.fastsoftbrasil.com`) — ver [getting-started](https://developers.fastsoftbrasil.com/docs/intro/getting-started).
 
 ## Setup
 
@@ -17,9 +17,13 @@ node server.js
 ```
 SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
-FASTSOFT_SECRET_KEY=sua_chave_fastsoft
+FASTSOFT_SECRET_KEY=sk_...          # obrigatório para PIX
+FASTSOFT_PUBLIC_KEY=pk_...          # opcional (reserva)
+FASTSOFT_POSTBACK_URL=https://...   # opcional; se vazio, postback = função Supabase ou /api/local
 PORT=3001
 ```
+
+**Webhook:** a FastSoft precisa de uma URL **pública HTTPS**. Em produção defina `FASTSOFT_POSTBACK_URL` para `https://seudominio.com/api/fastsoft-webhook` (com Nginx a fazer proxy para esta API). Se só tiver `SUPABASE_URL` e tiver deployado `fastsoft-webhook` no Supabase, pode omitir e usar a função edge.
 
 ## Endpoints
 

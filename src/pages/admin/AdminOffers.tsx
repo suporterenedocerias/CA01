@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, GripVertical, Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { AdminOfferPartnerTasksTab } from '@/pages/admin/AdminOfferPartnerTasksTab';
 
 interface SiteOffer {
   id: string;
@@ -24,6 +26,23 @@ export default function AdminOffers() {
   const [offers, setOffers] = useState<SiteOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  const handleDragStart = (id: string) => setDraggedId(id);
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+    const fromIdx = offers.findIndex((o) => o.id === draggedId);
+    const toIdx = offers.findIndex((o) => o.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const reordered = [...offers];
+    const [item] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, item);
+    setOffers(reordered);
+  };
+
+  const handleDragEnd = () => setDraggedId(null);
 
   useEffect(() => {
     async function fetch() {
@@ -114,81 +133,107 @@ export default function AdminOffers() {
     setSaving(false);
   };
 
-  if (loading) return <AdminLayout title="Ofertas"><p>Carregando...</p></AdminLayout>;
+  if (loading) {
+    return (
+      <AdminLayout title="Ofertas do site">
+        <p>Carregando...</p>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Ofertas do site">
-      <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
-        As ofertas ativas aparecem na página inicial, antes da seção de tamanhos. Clientes podem solicitar pelo
-        WhatsApp com a mensagem da oferta.
-      </p>
-      <div className="space-y-4">
-        {offers.map((offer) => (
-          <div key={offer.id} className="p-4 rounded-xl bg-card border shadow-sm">
-            <div className="flex items-start gap-4">
-              <GripVertical className="text-muted-foreground mt-3 cursor-grab shrink-0" size={20} />
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-                <Input
-                  placeholder="Título (ex: Caçamba 5m³)"
-                  value={offer.title}
-                  onChange={(e) => updateField(offer.id, 'title', e.target.value)}
-                />
-                <Input
-                  placeholder="Selo (ex: OFERTA, DESTAQUE)"
-                  value={offer.badge}
-                  onChange={(e) => updateField(offer.id, 'badge', e.target.value)}
-                />
-                <Input
-                  placeholder="Preço promocional (R$)"
-                  type="number"
-                  step="0.01"
-                  value={offer.price_current || ''}
-                  onChange={(e) => updateField(offer.id, 'price_current', parseFloat(e.target.value) || 0)}
-                />
-                <Input
-                  placeholder="Preço de (riscado, opcional)"
-                  type="number"
-                  step="0.01"
-                  value={offer.price_original ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    updateField(offer.id, 'price_original', v === '' ? null : parseFloat(v));
-                  }}
-                />
-                <div className="flex items-center gap-3 lg:col-span-1">
-                  <Switch checked={offer.active} onCheckedChange={() => toggleActive(offer.id)} />
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {offer.active ? 'Ativa' : 'Inativa'}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeOffer(offer.id, offer.isNew)}
-                    className="text-destructive ml-auto"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+      <Tabs defaultValue="catalogo" className="w-full">
+        <TabsList className="mb-6 grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="catalogo">Catálogo de ofertas</TabsTrigger>
+          <TabsTrigger value="parceiro">Pedido ao parceiro</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="catalogo" className="mt-0">
+          <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
+            As ofertas ativas aparecem na página inicial, antes da seção de tamanhos. Clientes podem solicitar pelo
+            WhatsApp com a mensagem da oferta.
+          </p>
+          <div className="space-y-4">
+            {offers.map((offer) => (
+              <div
+                key={offer.id}
+                draggable
+                onDragStart={() => handleDragStart(offer.id)}
+                onDragOver={(e) => handleDragOver(e, offer.id)}
+                onDragEnd={handleDragEnd}
+                className={`p-4 rounded-xl bg-card border shadow-sm transition-opacity ${draggedId === offer.id ? 'opacity-40' : 'opacity-100'}`}
+              >
+                <div className="flex items-start gap-4">
+                  <GripVertical className="text-muted-foreground mt-3 cursor-grab shrink-0 select-none" size={20} />
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                    <Input
+                      placeholder="Título (ex: Caçamba 5m³)"
+                      value={offer.title}
+                      onChange={(e) => updateField(offer.id, 'title', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Selo (ex: OFERTA, DESTAQUE)"
+                      value={offer.badge}
+                      onChange={(e) => updateField(offer.id, 'badge', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Preço promocional (R$)"
+                      type="number"
+                      step="0.01"
+                      value={offer.price_current || ''}
+                      onChange={(e) => updateField(offer.id, 'price_current', parseFloat(e.target.value) || 0)}
+                    />
+                    <Input
+                      placeholder="Preço de (riscado, opcional)"
+                      type="number"
+                      step="0.01"
+                      value={offer.price_original ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateField(offer.id, 'price_original', v === '' ? null : parseFloat(v));
+                      }}
+                    />
+                    <div className="flex items-center gap-3 lg:col-span-1">
+                      <Switch checked={offer.active} onCheckedChange={() => toggleActive(offer.id)} />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        {offer.active ? 'Ativa' : 'Inativa'}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeOffer(offer.id, offer.isNew)}
+                        className="text-destructive ml-auto"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                    <Textarea
+                      className="sm:col-span-2 lg:col-span-6 min-h-[72px]"
+                      placeholder="Descrição curta da oferta"
+                      value={offer.description}
+                      onChange={(e) => updateField(offer.id, 'description', e.target.value)}
+                    />
+                  </div>
                 </div>
-                <Textarea
-                  className="sm:col-span-2 lg:col-span-6 min-h-[72px]"
-                  placeholder="Descrição curta da oferta"
-                  value={offer.description}
-                  onChange={(e) => updateField(offer.id, 'description', e.target.value)}
-                />
               </div>
-            </div>
+            ))}
+
+            <Button variant="outline" onClick={addOffer} className="w-full">
+              <Plus size={18} className="mr-2" /> Adicionar oferta
+            </Button>
+
+            <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
+              <Save size={18} className="mr-2" />
+              {saving ? 'Salvando...' : 'Salvar ofertas'}
+            </Button>
           </div>
-        ))}
+        </TabsContent>
 
-        <Button variant="outline" onClick={addOffer} className="w-full">
-          <Plus size={18} className="mr-2" /> Adicionar oferta
-        </Button>
-
-        <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
-          <Save size={18} className="mr-2" />
-          {saving ? 'Salvando...' : 'Salvar ofertas'}
-        </Button>
-      </div>
+        <TabsContent value="parceiro" className="mt-0">
+          <AdminOfferPartnerTasksTab />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 }

@@ -1,0 +1,1 @@
+function a(e){return e.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,64)}function t(e){return a(e)||"estado"}export{t as a,a as s};

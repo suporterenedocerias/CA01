@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Save, MousePointerClick } from 'lucide-react';
+import { Plus, Trash2, Save, MousePointerClick, ExternalLink } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 
@@ -111,6 +112,14 @@ export default function AdminWhatsApp() {
 
   return (
     <AdminLayout title="Números de WhatsApp">
+      <p className="mb-6 text-sm text-muted-foreground">
+        A <strong>ordem dos números</strong> e a <strong>rotação</strong> (a cada quantos novos visitantes
+        trocar de número) são configuradas em{' '}
+        <Link to="/admin/funcionarios" className="font-medium text-primary underline-offset-4 hover:underline">
+          Funcionários
+        </Link>
+        . Aqui vê estatísticas de cliques; o campo «Peso» já não altera a rotação no site.
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="p-5 rounded-xl bg-card border shadow-sm">
           <span className="text-sm text-muted-foreground">Total de Cliques</span>
@@ -152,9 +161,23 @@ export default function AdminWhatsApp() {
                 <div className="flex items-center gap-3">
                   <Switch checked={num.active} onCheckedChange={() => toggleActive(num.id)} />
                   <span className="text-sm text-muted-foreground">{num.active ? 'Ativo' : 'Inativo'}</span>
-                  <Button variant="ghost" size="icon" onClick={() => removeNumber(num.id, num.isNew)} className="text-destructive ml-auto">
-                    <Trash2 size={16} />
-                  </Button>
+                  <div className="ml-auto flex items-center gap-1">
+                    {num.number && (
+                      <a
+                        href={`https://wa.me/${num.number.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Testar WhatsApp"
+                      >
+                        <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-400">
+                          <ExternalLink size={16} />
+                        </Button>
+                      </a>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => removeNumber(num.id, num.isNew)} className="text-destructive">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

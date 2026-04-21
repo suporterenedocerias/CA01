@@ -1,4 +1,5 @@
 const { getSupabaseAdmin } = require('../lib/supabase');
+const { normalizePixFields } = require('../lib/pix-normalize');
 const crypto = require('crypto');
 
 async function createPixCharge(req, res) {
@@ -6,7 +7,7 @@ async function createPixCharge(req, res) {
     const {
       nome, whatsapp, email, cpf_cnpj, cep, endereco, numero,
       complemento, bairro, cidade, estado, tamanho, quantidade,
-      valor_unitario, observacoes
+      valor_unitario, observacoes, page_slug, whatsapp_number_id,
     } = req.body;
 
     // Validação
@@ -35,8 +36,18 @@ async function createPixCharge(req, res) {
     const cleanDoc = (cpf_cnpj || '').replace(/\D/g, '');
     const docType = cleanDoc.length > 11 ? 'CNPJ' : 'CPF';
 
-    // URL do webhook — ajuste para seu domínio em produção
-    const webhookUrl = `${process.env.SUPABASE_URL ? process.env.SUPABASE_URL + '/functions/v1/fastsoft-webhook' : `http://localhost:${process.env.PORT || 3001}/api/fastsoft-webhook`}`;
+    // Postback FastSoft: URL pública acessível por eles (produção ou túnel ngrok/localtunnel).
+    // Prioridade: FASTSOFT_POSTBACK_URL → função Supabase → API Node local.
+    const explicitPostback = (process.env.FASTSOFT_POSTBACK_URL || '').trim();
+    const supabaseBase = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+    let webhookUrl;
+    if (explicitPostback) {
+      webhookUrl = explicitPostback;
+    } else if (supabaseBase) {
+      webhookUrl = `${supabaseBase}/functions/v1/fastsoft-webhook`;
+    } else {
+      webhookUrl = `http://localhost:${process.env.PORT || 3001}/api/fastsoft-webhook`;
+    }
 
     // Payload FastSoft
     const payload = {
@@ -66,7 +77,7 @@ async function createPixCharge(req, res) {
         },
       },
       items: [{
-        title: `Caçamba ${tamanho} x${qtd}`,
+        title: `Entulho Hoje — Caçamba ${tamanho} x${qtd}`,
         unitPrice: amount,
         quantity: 1,
         tangible: false,
@@ -82,12 +93,19 @@ async function createPixCharge(req, res) {
       },
     };
 
+    const fwd = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const clientIp = fwd || req.socket?.remoteAddress || '';
+    if (clientIp) {
+      payload.ip = clientIp.replace(/^::ffff:/, '');
+    }
+
     // Chamar FastSoft API
     const response = await fetch('https://api.fastsoftbrasil.com/api/user/transactions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${tokenBase64}`,
+        'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
     });
@@ -102,10 +120,61 @@ async function createPixCharge(req, res) {
       });
     }
 
-    const txData = data.data;
+    let txData = data.data;
+
+    // Buscar a transação criada para garantir que aparece no painel FastSoft
+    if (txData?.id) {
+      try {
+        const getTxRes = await fetch(`https://api.fastsoftbrasil.com/api/user/transactions/${txData.id}`, {
+          headers: {
+            'Authorization': `Basic ${tokenBase64}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (getTxRes.ok) {
+          const getTxData = await getTxRes.json();
+          if (getTxData?.data) txData = getTxData.data;
+          console.log('FastSoft transaction confirmed:', txData.id);
+        }
+      } catch (fetchErr) {
+        console.warn('FastSoft GET transaction warning:', fetchErr.message);
+      }
+    }
+    const pixNorm = normalizePixFields(txData);
 
     // Salvar pedido no banco
     const supabase = getSupabaseAdmin();
+
+    const slug = page_slug ? String(page_slug).trim().slice(0, 80) : null;
+
+    let resolvedWhatsappNumberId = null;
+    const widRaw = whatsapp_number_id != null ? String(whatsapp_number_id).trim() : '';
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(widRaw)) {
+      const { data: wn } = await supabase.from('whatsapp_numbers').select('id').eq('id', widRaw).maybeSingle();
+      if (wn?.id) resolvedWhatsappNumberId = wn.id;
+    }
+
+    // Fallback: se não temos número (cliente não clicou no WhatsApp),
+    // atribuir ao número activo actual na rotação.
+    if (!resolvedWhatsappNumberId) {
+      try {
+        const [settingsRes, numbersRes] = await Promise.all([
+          supabase.from('site_settings').select('whatsapp_new_visitor_seq, whatsapp_rotate_every').order('created_at').limit(1).single(),
+          supabase.from('whatsapp_numbers').select('id, order_index').eq('active', true).order('order_index').order('created_at'),
+        ]);
+        const nums = numbersRes.data || [];
+        if (nums.length > 0 && settingsRes.data) {
+          const seq = Number(settingsRes.data.whatsapp_new_visitor_seq || 0);
+          const rotateEvery = Math.max(1, Number(settingsRes.data.whatsapp_rotate_every || 5));
+          const slot = Math.floor(seq / rotateEvery) % nums.length;
+          resolvedWhatsappNumberId = nums[slot]?.id || nums[0].id;
+        } else if (nums.length > 0) {
+          resolvedWhatsappNumberId = nums[0].id;
+        }
+      } catch (e) {
+        console.warn('Fallback whatsapp_number_id falhou:', e.message);
+      }
+    }
 
     const { data: order, error: dbError } = await supabase.from('orders').insert({
       nome,
@@ -128,11 +197,13 @@ async function createPixCharge(req, res) {
       payment_status: 'pending',
       fastsoft_transaction_id: txData?.id || null,
       fastsoft_external_ref: `ped_${orderRef}`,
-      pix_qr_code: txData?.pix?.qrcode || null,
-      pix_qr_code_url: null,
-      pix_copy_paste: txData?.pix?.qrcode || txData?.pix?.url || null,
+      pix_qr_code: pixNorm.pix_qr_code,
+      pix_qr_code_url: pixNorm.pix_qr_code_url,
+      pix_copy_paste: pixNorm.pix_copy_paste,
       pix_expires_at: txData?.pix?.expirationDate || new Date(Date.now() + 86400000).toISOString(),
       observacoes: observacoes || '',
+      ...(slug ? { page_slug: slug } : {}),
+      ...(resolvedWhatsappNumberId ? { whatsapp_number_id: resolvedWhatsappNumberId } : {}),
     }).select().single();
 
     if (dbError) {
@@ -142,8 +213,9 @@ async function createPixCharge(req, res) {
 
     return res.json({
       order_id: order.id,
-      pix_qr_code: txData?.pix?.qrcode || null,
-      pix_copy_paste: txData?.pix?.qrcode || txData?.pix?.url || null,
+      pix_qr_code: pixNorm.pix_qr_code,
+      pix_qr_code_url: pixNorm.pix_qr_code_url,
+      pix_copy_paste: pixNorm.pix_copy_paste,
       expires_at: txData?.pix?.expirationDate || null,
     });
 

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/alexm/.claude/**)",
+      "Bash(start http://localhost:8080)",
+      "Bash(ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i \"C:/Users/alexm/.ssh/id_rsa\" root@187.77.252.82 \"echo ''CONECTADO OK'' && uname -a && df -h /\")"
+    ]
+  }
+}

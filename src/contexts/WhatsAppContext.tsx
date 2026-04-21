@@ -29,7 +29,7 @@ const WhatsAppContext = createContext<WhatsAppContextType | null>(null);
 
 const VISITOR_ID_KEY = 'cacamba_visitor_id';
 const ASSIGNED_NUMBER_ID_KEY = 'cacamba_assigned_whatsapp_number_id';
-const DEFAULT_MESSAGE = 'Olá quero pedir uma caçamba';
+const DEFAULT_MESSAGE = 'Olá! Quero uma caçamba com a Entulho Hoje';
 
 function getOrCreateVisitorId(): string {
   let id = localStorage.getItem(VISITOR_ID_KEY);
@@ -90,7 +90,27 @@ export function WhatsAppProvider({ children }: { children: React.ReactNode }) {
         .order('order_index');
 
       if (error) throw error;
-      setNumbers((data || []) as WhatsAppNumber[]);
+      const loaded = (data || []) as WhatsAppNumber[];
+      setNumbers(loaded);
+
+      // Auto-atribuir número ao visitante se ainda não tem um (sem precisar clicar no WPP)
+      const storedId = getStoredAssignedNumberId();
+      const stillActive = storedId && loaded.some((n) => n.id === storedId);
+      if (!stillActive && loaded.length > 0) {
+        try {
+          const { data: clickData } = await (supabase as any).rpc('register_weighted_whatsapp_click', {
+            p_visitor_id: getOrCreateVisitorId(),
+            p_page_url: window.location.href,
+          });
+          const selected = (Array.isArray(clickData) ? clickData[0] : clickData) as WeightedClickResult | null;
+          if (selected?.number_id) {
+            localStorage.setItem(ASSIGNED_NUMBER_ID_KEY, selected.number_id);
+            setAssignedNumberId(selected.number_id);
+          }
+        } catch {
+          // Sem atribuição automática — fallback para seleção local
+        }
+      }
     } catch (err) {
       console.error('WhatsApp init error:', err);
       setNumbers([]);

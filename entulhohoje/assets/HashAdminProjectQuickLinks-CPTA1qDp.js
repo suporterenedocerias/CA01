@@ -1,0 +1,11 @@
+import{c as n,j as e,g as o,U as p,P as h,M as m,$ as g}from"./index-D1PJfPlZ.js";import{L as b,U as x,C as f,S as u}from"./user-cog-Dn9aC0fn.js";import{S as z}from"./shopping-cart-DHr2ZuJ_.js";import{T as I}from"./tag-BE402JJh.js";/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const k=n("ArrowUpRight",[["path",{d:"M7 7h10v10",key:"1tivn9"}],["path",{d:"M7 17 17 7",key:"1vkiza"}]]);/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const y=n("Globe",[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["path",{d:"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20",key:"13o1zl"}],["path",{d:"M2 12h20",key:"9i4pu4"}]]),v=[{path:"",label:"Site público",Icon:y},{path:"/admin/dashboard",label:"Dashboard",Icon:b},{path:"/admin/leads",label:"Leads / pedidos",Icon:p},{path:"/admin/funcionarios",label:"Funcionários",Icon:x},{path:"/admin/orders",label:"Pedidos PIX",Icon:z},{path:"/admin/offers",label:"Ofertas",Icon:I},{path:"/admin/sizes",label:"Tamanhos",Icon:h},{path:"/admin/whatsapp",label:"WhatsApp",Icon:m},{path:"/admin/regions",label:"Regiões",Icon:g},{path:"/admin/counters",label:"Contadores",Icon:f},{path:"/admin/settings",label:"Configurações",Icon:u}];function L({inst:s,variant:r="grid",className:t}){const i=s.siteOrigin.replace(/\/$/,"");return e.jsx("div",{className:o(r==="grid"?"flex flex-wrap gap-2":"flex flex-wrap gap-1.5",t),children:v.map(({path:a,label:c,Icon:l})=>{const d=a?`${i}${a}`:i;return e.jsxs("a",{href:d,target:"_blank",rel:"noopener noreferrer",className:o("inline-flex items-center gap-1.5 rounded-lg border font-medium transition-colors",r==="grid"?"border-zinc-600 bg-zinc-950/60 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-400 hover:bg-zinc-800 hover:text-white":"border-zinc-700 bg-zinc-900/80 px-2 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-white"),children:[e.jsx(l,{className:"size-3.5 shrink-0 opacity-80","aria-hidden":!0}),c,e.jsx(k,{className:"size-3 shrink-0 opacity-50","aria-hidden":!0})]},a||"root")})})}export{L as H};

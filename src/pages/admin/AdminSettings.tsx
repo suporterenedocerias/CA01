@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, KeyRound, Mail } from 'lucide-react';
+import { Save, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { mapSupabaseAuthError } from '@/lib/auth-errors';
 
@@ -20,9 +20,6 @@ export default function AdminSettings() {
   const [pwdConfirm, setPwdConfirm] = useState('');
   const [pwdSaving, setPwdSaving] = useState(false);
 
-  const [emailNew, setEmailNew] = useState('');
-  const [emailPwd, setEmailPwd] = useState('');
-  const [emailSaving, setEmailSaving] = useState(false);
 
   useEffect(() => {
     async function fetch() {
@@ -93,47 +90,7 @@ export default function AdminSettings() {
     }
   };
 
-  const handleEmailChange = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!adminEmail) return;
-    const next = emailNew.trim().toLowerCase();
-    if (!next || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
-      toast.error('Indique um e-mail válido.');
-      return;
-    }
-    if (next === adminEmail.toLowerCase()) {
-      toast.error('O novo e-mail é igual ao atual.');
-      return;
-    }
-    setEmailSaving(true);
-    try {
-      const { error: signErr } = await supabase.auth.signInWithPassword({
-        email: adminEmail,
-        password: emailPwd,
-      });
-      if (signErr) {
-        toast.error('Senha incorreta — confirme a sua identidade.');
-        return;
-      }
-      const { error } = await supabase.auth.updateUser({ email: next });
-      if (error) throw error;
-      toast.success(
-        'E-mail de login atualizado. Se o Supabase exigir confirmação, abra a mensagem no novo e-mail. Pode precisar de voltar a entrar.',
-        { duration: 8000 },
-      );
-      setEmailNew('');
-      setEmailPwd('');
-      const { data: { user } } = await supabase.auth.getUser();
-      setAdminEmail(user?.email ?? next);
-    } catch (err: unknown) {
-      const ex = err as { message?: string };
-      toast.error(mapSupabaseAuthError(ex.message || ''));
-    } finally {
-      setEmailSaving(false);
-    }
-  };
-
-  if (loading) return <AdminLayout title="Configurações"><p>Carregando...</p></AdminLayout>;
+if (loading) return <AdminLayout title="Configurações"><p>Carregando...</p></AdminLayout>;
 
   return (
     <AdminLayout title="Configurações do Site">
@@ -192,39 +149,6 @@ export default function AdminSettings() {
             </Button>
           </form>
 
-          <form onSubmit={handleEmailChange} className="space-y-3 pt-4 border-t">
-            <p className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Mail size={16} />
-              Alterar e-mail de login
-            </p>
-            <div>
-              <Label htmlFor="email-new">Novo e-mail</Label>
-              <Input
-                id="email-new"
-                type="email"
-                autoComplete="email"
-                value={emailNew}
-                onChange={(e) => setEmailNew(e.target.value)}
-                className="mt-1"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="email-pwd">Senha atual (confirmação)</Label>
-              <Input
-                id="email-pwd"
-                type="password"
-                autoComplete="current-password"
-                value={emailPwd}
-                onChange={(e) => setEmailPwd(e.target.value)}
-                className="mt-1"
-                required
-              />
-            </div>
-            <Button type="submit" variant="secondary" disabled={emailSaving}>
-              {emailSaving ? 'A atualizar…' : 'Atualizar e-mail de login'}
-            </Button>
-          </form>
         </div>
 
         <div className="p-6 rounded-xl bg-card border shadow-sm space-y-4">
