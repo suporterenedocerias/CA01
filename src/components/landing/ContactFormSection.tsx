@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,11 +32,13 @@ interface ContactFormSectionProps {
 
 export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { getWhatsAppUrl, trackClick, available, assignedNumberId } = useWhatsApp();
   const { slug } = useStatePage();
   const [loading, setLoading] = useState(false);
   const [sizeOptions, setSizeOptions] = useState<DumpsterOption[]>([]);
   const [selectedPrice, setSelectedPrice] = useState(0);
+  const [priceOverride, setPriceOverride] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: '',
     whatsapp: '',
@@ -63,15 +65,29 @@ export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
         .eq('active', true)
         .order('order_index');
 
-      if (data && data.length > 0) {
-        setSizeOptions(data);
-        setForm((f) => ({ ...f, tamanho: data[0].size }));
-        setSelectedPrice(Number(data[0].price));
-      } else {
-        setSizeOptions(fallback);
-        setForm((f) => ({ ...f, tamanho: fallback[0].size }));
-        setSelectedPrice(fallback[0].price);
+      const options = (data && data.length > 0 ? data : fallback) as DumpsterOption[];
+      setSizeOptions(options);
+
+      const paramTamanho = searchParams.get('tamanho');
+      const paramValor = searchParams.get('valor');
+      const paramQty = searchParams.get('qty');
+
+      const initialSize = paramTamanho
+        ? (options.find((s) => s.size === paramTamanho) ? paramTamanho : options[0].size)
+        : options[0].size;
+      const initialSizeOption = options.find((s) => s.size === initialSize) || options[0];
+
+      if (paramValor) {
+        const overrideVal = parseFloat(paramValor);
+        if (!isNaN(overrideVal) && overrideVal > 0) setPriceOverride(overrideVal);
       }
+
+      setForm((f) => ({
+        ...f,
+        tamanho: initialSize,
+        quantidade: paramQty ? String(parseInt(paramQty, 10) || 1) : f.quantidade,
+      }));
+      setSelectedPrice(Number(initialSizeOption.price));
     }
     fetchSizes();
   }, []);
@@ -82,7 +98,10 @@ export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
 
     if (name === 'tamanho') {
       const found = sizeOptions.find((s) => s.size === value);
-      if (found) setSelectedPrice(Number(found.price));
+      if (found) {
+        setSelectedPrice(Number(found.price));
+        setPriceOverride(null); // reset override ao trocar tamanho manualmente
+      }
     }
 
     if (name === 'cep') {
@@ -112,7 +131,8 @@ export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
     }
   };
 
-  const valorTotal = selectedPrice * parseInt(form.quantidade || '1', 10);
+  const effectivePrice = priceOverride !== null ? priceOverride : selectedPrice;
+  const valorTotal = effectivePrice * parseInt(form.quantidade || '1', 10);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +164,7 @@ export function ContactFormSection({ pageSlug }: ContactFormSectionProps = {}) {
         estado: form.estado.trim() || null,
         tamanho: form.tamanho,
         quantidade: parseInt(form.quantidade, 10),
-        valor_unitario: selectedPrice,
+        valor_unitario: effectivePrice,
         observacoes: form.observacoes.trim() || null,
         page_slug: slug || null,
         custom_page_slug: pageSlug || null,

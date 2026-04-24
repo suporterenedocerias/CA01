@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Landmark,
   FileText,
+  QrCode,
 } from 'lucide-react';
 import { BrandWordmark } from '@/components/BrandWordmark';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -31,6 +32,7 @@ const menuSections = [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
       { label: 'Leads / Contatos', icon: Users, path: '/admin/leads' },
       { label: 'Pedidos PIX', icon: ShoppingCart, path: '/admin/orders' },
+      { label: 'PIX Manual', icon: QrCode, path: '/admin/manual-pix' },
     ],
   },
   {

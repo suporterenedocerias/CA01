@@ -32,6 +32,7 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings.tsx"));
 const AdminTraffic = lazy(() => import("./pages/admin/AdminTraffic.tsx"));
 const AdminGatewayFees = lazy(() => import("./pages/admin/AdminGatewayFees.tsx"));
 const AdminCustomPages = lazy(() => import("./pages/admin/AdminCustomPages.tsx"));
+const AdminManualPix = lazy(() => import("./pages/admin/AdminManualPix.tsx"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin.tsx"));
 const StateLanding = lazy(() => import("./pages/StateLanding.tsx"));
 const Checkout = lazy(() => import("./pages/Checkout.tsx"));
@@ -116,6 +117,7 @@ const App = () => (
               <Route path="/admin/traffic" element={<AdminTraffic />} />
               <Route path="/admin/gateway-fees" element={<AdminGatewayFees />} />
               <Route path="/admin/custom-pages" element={<AdminCustomPages />} />
+              <Route path="/admin/manual-pix" element={<AdminManualPix />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/hashadmin/*" element={<HashAdminLegacyRedirect />} />
               <Route path={HASHADMIN_LOGIN_PATH} element={<HashAdminLogin />} />
