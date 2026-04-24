@@ -2,10 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createPixCharge } = require('./routes/create-pix-charge');
-const { fastsoftWebhook } = require('./routes/fastsoft-webhook');
+const { koliseuWebhook } = require('./routes/fastsoft-webhook');
 const { checkPayment } = require('./routes/check-payment');
 const { createAdmin } = require('./routes/create-admin');
-const { listTransactions, getTransaction, createTransaction } = require('./routes/fastsoft-gateway');
+const { listPayments, getPayment, createPayment } = require('./routes/fastsoft-gateway');
 const { adminMagicLink } = require('./routes/admin-magic-link');
 const { hashAdminTraffic, hashAdminSaveSpend } = require('./routes/hashadmin-traffic');
 const { getClients, saveClients } = require('./routes/hashadmin-clients');
@@ -25,9 +25,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Rotas
+// Rotas principais
 app.post('/api/create-pix-charge', createPixCharge);
-app.post('/api/fastsoft-webhook', fastsoftWebhook);
+app.post('/api/koliseu-webhook', koliseuWebhook);
 app.get('/api/check-payment/:orderId', checkPayment);
 app.post('/api/create-admin', createAdmin);
 
@@ -42,10 +42,10 @@ app.post('/api/hashadmin/traffic/spend', hashAdminSaveSpend);
 app.get('/api/hashadmin/clients', getClients);
 app.post('/api/hashadmin/clients', saveClients);
 
-// FastSoft gateway proxy (CEO)
-app.get('/api/fastsoft/transactions', listTransactions);
-app.get('/api/fastsoft/transactions/:id', getTransaction);
-app.post('/api/fastsoft/transactions', createTransaction);
+// Koliseu gateway proxy (CEO)
+app.get('/api/koliseu/payments', listPayments);
+app.get('/api/koliseu/payments/:id', getPayment);
+app.post('/api/koliseu/payments', createPayment);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Entulho Hoje API rodando em http://0.0.0.0:${PORT} (acessível na rede local)`);

@@ -132,6 +132,7 @@ export type Database = {
           estado: string | null
           fastsoft_external_ref: string | null
           fastsoft_transaction_id: string | null
+          koliseu_payment_id: string | null
           forma_pagamento: string
           id: string
           nome: string
@@ -165,6 +166,7 @@ export type Database = {
           estado?: string | null
           fastsoft_external_ref?: string | null
           fastsoft_transaction_id?: string | null
+          koliseu_payment_id?: string | null
           forma_pagamento?: string
           id?: string
           nome: string
@@ -198,6 +200,7 @@ export type Database = {
           estado?: string | null
           fastsoft_external_ref?: string | null
           fastsoft_transaction_id?: string | null
+          koliseu_payment_id?: string | null
           forma_pagamento?: string
           id?: string
           nome?: string

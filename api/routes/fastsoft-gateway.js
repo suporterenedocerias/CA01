@@ -1,32 +1,46 @@
 /**
- * Proxy FastSoft para o painel CEO.
+ * Proxy Koliseu para o painel CEO.
  * Usa X-Gateway-Key (enviado pelo frontend, vem do localStorage do cliente)
- * ou cai no FASTSOFT_SECRET_KEY do .env.
+ * ou cai no KOLISEU_API_KEY do .env.
  */
 
-const FASTSOFT_BASE = 'https://api.fastsoftbrasil.com';
-
-function makeAuth(secretKey) {
-  return 'Basic ' + Buffer.from(`x:${secretKey}`).toString('base64');
-}
+const KOLISEU_BASE = 'https://www.koliseu.cloud';
 
 function getKey(req) {
   const fromHeader = req.headers['x-gateway-key'];
-  return (fromHeader || process.env.FASTSOFT_SECRET_KEY || '').trim();
+  return (fromHeader || process.env.KOLISEU_API_KEY || '').trim();
 }
 
-/** GET /api/fastsoft/transactions */
-async function listTransactions(req, res) {
+function koliseuHeaders(key) {
+  return { 'x-api-key': key, 'Accept': 'application/json' };
+}
+
+/** GET /api/koliseu/payments */
+async function listPayments(req, res) {
   try {
     const key = getKey(req);
     if (!key) return res.status(400).json({ error: 'Chave do gateway não configurada' });
 
-    // Repassa query params (page, limit, status, start_date, end_date, etc.)
     const params = new URLSearchParams(req.query).toString();
-    const url = `${FASTSOFT_BASE}/api/user/transactions${params ? '?' + params : ''}`;
+    const url = `${KOLISEU_BASE}/api/v1/pix/payments${params ? '?' + params : ''}`;
 
-    const r = await fetch(url, {
-      headers: { Authorization: makeAuth(key), Accept: 'application/json' },
+    const r = await fetch(url, { headers: koliseuHeaders(key) });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status).json(body);
+    return res.json(body);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+/** GET /api/koliseu/payments/:id */
+async function getPayment(req, res) {
+  try {
+    const key = getKey(req);
+    if (!key) return res.status(400).json({ error: 'Chave do gateway não configurada' });
+
+    const r = await fetch(`${KOLISEU_BASE}/api/v1/pix/payments/${req.params.id}`, {
+      headers: koliseuHeaders(key),
     });
 
     const body = await r.json().catch(() => ({}));
@@ -37,36 +51,17 @@ async function listTransactions(req, res) {
   }
 }
 
-/** GET /api/fastsoft/transactions/:id */
-async function getTransaction(req, res) {
+/** POST /api/koliseu/payments */
+async function createPayment(req, res) {
   try {
     const key = getKey(req);
     if (!key) return res.status(400).json({ error: 'Chave do gateway não configurada' });
 
-    const r = await fetch(`${FASTSOFT_BASE}/api/user/transactions/${req.params.id}`, {
-      headers: { Authorization: makeAuth(key), Accept: 'application/json' },
-    });
-
-    const body = await r.json().catch(() => ({}));
-    if (!r.ok) return res.status(r.status).json(body);
-    return res.json(body);
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
-  }
-}
-
-/** POST /api/fastsoft/transactions */
-async function createTransaction(req, res) {
-  try {
-    const key = getKey(req);
-    if (!key) return res.status(400).json({ error: 'Chave do gateway não configurada' });
-
-    const r = await fetch(`${FASTSOFT_BASE}/api/user/transactions`, {
+    const r = await fetch(`${KOLISEU_BASE}/api/v1/pix/payments`, {
       method: 'POST',
       headers: {
-        Authorization: makeAuth(key),
+        ...koliseuHeaders(key),
         'Content-Type': 'application/json',
-        Accept: 'application/json',
       },
       body: JSON.stringify(req.body),
     });
@@ -79,4 +74,4 @@ async function createTransaction(req, res) {
   }
 }
 
-module.exports = { listTransactions, getTransaction, createTransaction };
+module.exports = { listPayments, getPayment, createPayment };

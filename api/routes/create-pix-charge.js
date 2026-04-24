@@ -2,6 +2,8 @@ const { getSupabaseAdmin } = require('../lib/supabase');
 const { normalizePixFields } = require('../lib/pix-normalize');
 const crypto = require('crypto');
 
+const KOLISEU_BASE = 'https://www.koliseu.cloud';
+
 async function createPixCharge(req, res) {
   try {
     const {
@@ -11,7 +13,6 @@ async function createPixCharge(req, res) {
       custom_page_slug,
     } = req.body;
 
-    // Validação
     if (!nome || !whatsapp || !tamanho || !valor_unitario) {
       return res.status(400).json({
         error: 'Campos obrigatórios: nome, whatsapp, tamanho, valor_unitario'
@@ -20,10 +21,10 @@ async function createPixCharge(req, res) {
 
     const qtd = quantidade || 1;
     const valor_total = valor_unitario * qtd;
-    const amount = Math.round(valor_total * 100); // centavos
+    const amountCents = Math.round(valor_total * 100);
 
-    // Buscar gateway da página customizada (se informado)
-    let fastsoftKey = process.env.FASTSOFT_SECRET_KEY;
+    // Buscar chave da página customizada (se informado)
+    let koliseuKey = process.env.KOLISEU_API_KEY;
     if (custom_page_slug) {
       try {
         const supabaseAdmin = getSupabaseAdmin();
@@ -33,7 +34,7 @@ async function createPixCharge(req, res) {
           .eq('slug', String(custom_page_slug).trim())
           .maybeSingle();
         if (pageGw?.gateway_sk) {
-          fastsoftKey = pageGw.gateway_sk;
+          koliseuKey = pageGw.gateway_sk;
           console.log(`[gateway] usando chave da página "${custom_page_slug}"`);
         }
       } catch (e) {
@@ -41,124 +42,61 @@ async function createPixCharge(req, res) {
       }
     }
 
-    if (!fastsoftKey) {
-      throw new Error('FASTSOFT_SECRET_KEY not configured');
-    }
+    if (!koliseuKey) throw new Error('KOLISEU_API_KEY not configured');
 
-    // FastSoft Basic Auth: base64("x:<secret_key>")
-    const tokenBase64 = Buffer.from(`x:${fastsoftKey}`).toString('base64');
-
-    // Ref única do pedido
     const orderRef = crypto.randomUUID().slice(0, 8);
-
-    // Documento limpo
     const cleanDoc = (cpf_cnpj || '').replace(/\D/g, '');
-    const docType = cleanDoc.length > 11 ? 'CNPJ' : 'CPF';
 
-    // Postback FastSoft: URL pública acessível por eles (produção ou túnel ngrok/localtunnel).
-    // Prioridade: FASTSOFT_POSTBACK_URL → função Supabase → API Node local.
-    const explicitPostback = (process.env.FASTSOFT_POSTBACK_URL || '').trim();
+    // URL do webhook Koliseu
+    const explicitWebhook = (process.env.KOLISEU_WEBHOOK_URL || '').trim();
     const supabaseBase = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
     let webhookUrl;
-    if (explicitPostback) {
-      webhookUrl = explicitPostback;
+    if (explicitWebhook) {
+      webhookUrl = explicitWebhook;
     } else if (supabaseBase) {
-      webhookUrl = `${supabaseBase}/functions/v1/fastsoft-webhook`;
+      webhookUrl = `${supabaseBase}/functions/v1/koliseu-webhook`;
     } else {
-      webhookUrl = `http://localhost:${process.env.PORT || 3001}/api/fastsoft-webhook`;
+      webhookUrl = `http://localhost:${process.env.PORT || 3001}/api/koliseu-webhook`;
     }
 
-    // Payload FastSoft
+    // Payload Koliseu
     const payload = {
-      amount,
-      paymentMethod: 'PIX',
-      customer: {
+      amountCents,
+      description: `Caçamba ${tamanho} x${qtd}`,
+      externalReference: `ped_${orderRef}`,
+      client: {
         name: nome,
         email: email || `${whatsapp.replace(/\D/g, '')}@noemail.com`,
-        document: {
-          number: cleanDoc || '00000000000',
-          type: docType,
-        },
         phone: whatsapp.replace(/\D/g, ''),
-        externaRef: `cli_${orderRef}`,
+        document: cleanDoc || '00000000000',
       },
-      shipping: {
-        fee: 0,
-        address: {
-          street: endereco || '',
-          streetNumber: numero || '',
-          complement: complemento || '',
-          zipCode: (cep || '').replace(/\D/g, ''),
-          neighborhood: bairro || '',
-          city: cidade || '',
-          state: estado || '',
-          country: 'br',
-        },
-      },
-      items: [{
-        title: `Entulho Hoje — Caçamba ${tamanho} x${qtd}`,
-        unitPrice: amount,
-        quantity: 1,
-        tangible: false,
-        externalRef: `ped_${orderRef}`,
-      }],
-      postbackUrl: webhookUrl,
-      metadata: {
-        order_ref: orderRef,
-      },
-      traceable: true,
-      pix: {
-        expiresInDays: 1,
-      },
+      webhookUrl,
     };
 
-    const fwd = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-    const clientIp = fwd || req.socket?.remoteAddress || '';
-    if (clientIp) {
-      payload.ip = clientIp.replace(/^::ffff:/, '');
-    }
-
-    // Chamar FastSoft API
-    const response = await fetch('https://api.fastsoftbrasil.com/api/user/transactions', {
+    // Chamar Koliseu API
+    const response = await fetch(`${KOLISEU_BASE}/api/v1/pix/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${tokenBase64}`,
+        'x-api-key': koliseuKey,
         'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
     });
 
     const data = await response.json();
+    console.log('Koliseu response:', JSON.stringify(data));
 
     if (!response.ok) {
-      console.error('FastSoft error:', JSON.stringify(data));
+      console.error('Koliseu error:', JSON.stringify(data));
       return res.status(500).json({
         error: 'Erro ao gerar cobrança PIX',
         details: data,
       });
     }
 
-    let txData = data.data;
-
-    // Buscar a transação criada para garantir que aparece no painel FastSoft
-    if (txData?.id) {
-      try {
-        const getTxRes = await fetch(`https://api.fastsoftbrasil.com/api/user/transactions/${txData.id}`, {
-          headers: {
-            'Authorization': `Basic ${tokenBase64}`,
-            'Accept': 'application/json',
-          },
-        });
-        if (getTxRes.ok) {
-          const getTxData = await getTxRes.json();
-          if (getTxData?.data) txData = getTxData.data;
-          console.log('FastSoft transaction confirmed:', txData.id);
-        }
-      } catch (fetchErr) {
-        console.warn('FastSoft GET transaction warning:', fetchErr.message);
-      }
-    }
+    // Suporta { data: {...} }, { payment: {...} } ou root direto
+    const txData = data.data ?? data.payment ?? data;
     const pixNorm = normalizePixFields(txData);
 
     // Salvar pedido no banco
@@ -175,8 +113,6 @@ async function createPixCharge(req, res) {
       if (wn?.id) resolvedWhatsappNumberId = wn.id;
     }
 
-    // Fallback: se não temos número (cliente não clicou no WhatsApp),
-    // atribuir ao número activo actual na rotação.
     if (!resolvedWhatsappNumberId) {
       try {
         const [settingsRes, numbersRes] = await Promise.all([
@@ -197,6 +133,13 @@ async function createPixCharge(req, res) {
       }
     }
 
+    const expiresAt =
+      txData?.expiresAt ??
+      txData?.expiration ??
+      txData?.pix?.expiresAt ??
+      txData?.pix?.expirationDate ??
+      new Date(Date.now() + 86400000).toISOString();
+
     const { data: order, error: dbError } = await supabase.from('orders').insert({
       nome,
       whatsapp,
@@ -216,12 +159,11 @@ async function createPixCharge(req, res) {
       forma_pagamento: 'pix',
       status: 'aguardando_pagamento',
       payment_status: 'pending',
-      fastsoft_transaction_id: txData?.id || null,
-      fastsoft_external_ref: `ped_${orderRef}`,
+      koliseu_payment_id: txData?.id || null,
       pix_qr_code: pixNorm.pix_qr_code,
       pix_qr_code_url: pixNorm.pix_qr_code_url,
       pix_copy_paste: pixNorm.pix_copy_paste,
-      pix_expires_at: txData?.pix?.expirationDate || new Date(Date.now() + 86400000).toISOString(),
+      pix_expires_at: expiresAt,
       observacoes: observacoes || '',
       ...(slug ? { page_slug: slug } : {}),
       ...(resolvedWhatsappNumberId ? { whatsapp_number_id: resolvedWhatsappNumberId } : {}),
@@ -237,7 +179,7 @@ async function createPixCharge(req, res) {
       pix_qr_code: pixNorm.pix_qr_code,
       pix_qr_code_url: pixNorm.pix_qr_code_url,
       pix_copy_paste: pixNorm.pix_copy_paste,
-      expires_at: txData?.pix?.expirationDate || null,
+      expires_at: expiresAt,
     });
 
   } catch (error) {

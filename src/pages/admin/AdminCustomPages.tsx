@@ -36,7 +36,7 @@ const EMPTY_PAGE: Omit<CustomPage, 'id'> = {
   seo_description: '',
   custom_domain: '',
   active: true,
-  gateway_type: 'fastsoft',
+  gateway_type: 'koliseu',
   gateway_pk: '',
   gateway_sk: '',
 };

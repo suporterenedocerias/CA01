@@ -1,12 +1,10 @@
 /**
- * Normaliza resposta PIX da FastSoft / white-label (Fluxxopay).
- * O campo pix.qrcode às vezes vem como BR Code (EMV) e às vezes como imagem base64 —
- * usar o errado no QRCodeSVG quebra o pagamento no app do banco (comum no mobile).
+ * Normaliza resposta PIX — suporta Koliseu e outros gateways.
+ * Tenta múltiplos campos possíveis para extrair o EMV BR Code e a imagem QR.
  */
 
 function isBrPixEmv(s) {
-  const t = String(s || '').trim();
-  return t.startsWith('000201');
+  return String(s || '').trim().startsWith('000201');
 }
 
 function toImageDataUrl(qrcode) {
@@ -19,38 +17,60 @@ function toImageDataUrl(qrcode) {
 }
 
 /**
- * @param {object} txData - data da transação (ex.: response.data)
- * @returns {{ pix_copy_paste: string | null, pix_qr_code: string | null, pix_qr_code_url: string | null }}
+ * @param {object} txData - objeto da transação (root ou data da resposta)
+ * @returns {{ pix_copy_paste: string|null, pix_qr_code: string|null, pix_qr_code_url: string|null, _brCodeForQr: string|null }}
  */
 function normalizePixFields(txData) {
   const pix = txData?.pix || {};
-  const q = pix.qrcode != null ? String(pix.qrcode).trim() : '';
-  const url = pix.url != null ? String(pix.url).trim() : '';
 
-  const extraKeys = ['copyPaste', 'copyAndPaste', 'payload', 'qrCode', 'brCode'];
+  // Candidatos ao EMV BR Code (copy-paste / geração de QR)
+  const emvCandidates = [
+    txData?.pixCode,
+    txData?.pixCopyPaste,
+    txData?.copyPaste,
+    txData?.brCode,
+    txData?.emvCode,
+    txData?.qrCode,
+    pix.qrcode,
+    pix.copyPaste,
+    pix.copyAndPaste,
+    pix.payload,
+    pix.brCode,
+    pix.qrCode,
+  ].filter(Boolean);
+
   let brCode = null;
-  for (const k of extraKeys) {
-    const v = pix[k];
-    if (v != null && isBrPixEmv(v)) {
-      brCode = String(v).trim();
-      break;
-    }
+  for (const v of emvCandidates) {
+    if (isBrPixEmv(v)) { brCode = String(v).trim(); break; }
   }
-  if (!brCode && isBrPixEmv(q)) brCode = q;
-  if (!brCode && isBrPixEmv(url)) brCode = url;
 
-  const qrImageDataUrl = !brCode ? toImageDataUrl(q) : null;
-  const httpQrUrl = url.startsWith('http') ? url : null;
+  // Candidatos a imagem QR (base64)
+  const qrImageCandidates = [
+    txData?.pixQrCode,
+    txData?.qrCodeBase64,
+    txData?.qrCodeImage,
+    pix.qrcode,
+  ].filter(Boolean);
 
-  let pix_copy_paste =
-    brCode ||
-    (!qrImageDataUrl && q && !q.startsWith('http') ? q : null) ||
-    (httpQrUrl && !qrImageDataUrl ? url : null) ||
-    null;
+  let qrImageDataUrl = null;
+  for (const v of qrImageCandidates) {
+    const img = toImageDataUrl(v);
+    if (img) { qrImageDataUrl = img; break; }
+  }
+
+  // Candidatos a URL HTTP do QR
+  const urlCandidates = [
+    txData?.qrCodeUrl,
+    txData?.pixUrl,
+    pix.url,
+  ].filter(Boolean);
+  const httpQrUrl = urlCandidates.find(u => String(u).startsWith('http')) || null;
+
+  const rawFallback = emvCandidates[0] || qrImageCandidates[0] || null;
 
   return {
-    pix_copy_paste,
-    pix_qr_code: q || null,
+    pix_copy_paste: brCode || null,
+    pix_qr_code: rawFallback ? String(rawFallback) : null,
     pix_qr_code_url: qrImageDataUrl || httpQrUrl || null,
     _brCodeForQr: brCode,
   };

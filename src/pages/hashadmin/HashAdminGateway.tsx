@@ -10,22 +10,27 @@ import {
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type TxFee = { fixedAmount: number; spreadPercentage: number; estimatedFee: number; netAmount: number };
-type TxItem = { title?: string };
 type Transaction = {
   id: string;
   status: string;
-  amount: number;
-  paymentMethod?: string;
+  amount?: number;
+  amountCents?: number;
+  description?: string;
+  externalReference?: string;
   createdAt?: string;
+  created_at?: string;
   paidAt?: string | null;
+  paid_at?: string | null;
+  client?: { name?: string; document?: string; email?: string };
+  // compatibilidade legada FastSoft
   customer?: { document?: { number?: string; type?: string } };
-  items?: TxItem[];
-  fee?: TxFee;
-  pix?: { qrcode?: string; expirationDate?: string };
-  _clientLabel?: string; // injetado localmente
+  items?: { title?: string }[];
+  fee?: { netAmount?: number };
+  pix?: { qrcode?: string; copyPaste?: string };
+  pixCode?: string;
+  _clientLabel?: string;
 };
-type ApiResponse = { status?: number; message?: string; data?: Transaction[]; total?: number; error?: string };
+type ApiResponse = { status?: number; message?: string; data?: Transaction[]; payments?: Transaction[]; total?: number; error?: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,8 +41,17 @@ function fmtDate(s?: string | null) {
   if (!s) return '—';
   return new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-function txName(tx: Transaction): string { return tx.items?.[0]?.title?.trim() || '—'; }
-function txDoc(tx: Transaction): string { return tx.customer?.document?.number ?? '—'; }
+function txAmountCents(tx: Transaction): number {
+  return tx.amountCents ?? (tx.amount ?? 0);
+}
+function txName(tx: Transaction): string {
+  return tx.description ?? tx.items?.[0]?.title?.trim() ?? tx.client?.name ?? '—';
+}
+function txDoc(tx: Transaction): string {
+  return tx.client?.document ?? tx.customer?.document?.number ?? '—';
+}
+function txCreatedAt(tx: Transaction): string | undefined { return tx.createdAt ?? tx.created_at; }
+function txPaidAt(tx: Transaction): string | null | undefined { return tx.paidAt ?? tx.paid_at; }
 
 function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
 function today() { return toDateStr(new Date()); }
@@ -80,8 +94,8 @@ function CreateModal({ gatewayKey, onClose, onCreated }: { gatewayKey: string; o
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (gatewayKey) headers['X-Gateway-Key'] = gatewayKey;
       const centavos = Math.round(Number(form.amount.replace(',', '.')) * 100);
-      const body = { description: form.description, amount: centavos, payer: { name: form.payer_name, document: form.payer_document.replace(/\D/g, ''), email: form.payer_email || undefined }, type: 'PIX' };
-      const res = await fetch(`${resolveApiBase()}/fastsoft/transactions`, { method: 'POST', headers, body: JSON.stringify(body) });
+      const body = { amountCents: centavos, description: form.description, externalReference: `manual_${Date.now()}`, client: { name: form.payer_name, document: form.payer_document.replace(/\D/g, ''), email: form.payer_email || undefined, phone: '' } };
+      const res = await fetch(`${resolveApiBase()}/koliseu/payments`, { method: 'POST', headers, body: JSON.stringify(body) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message ?? json.error ?? `Erro ${res.status}`);
       setResult((json.data ?? json) as Transaction);
@@ -100,7 +114,7 @@ function CreateModal({ gatewayKey, onClose, onCreated }: { gatewayKey: string; o
             <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-300 space-y-1">
               <p><span className="text-zinc-500">ID:</span> {result.id}</p>
               <p><span className="text-zinc-500">Status:</span> {result.status}</p>
-              {result.pix?.qrcode && <p className="break-all"><span className="text-zinc-500">QR:</span> {result.pix.qrcode}</p>}
+              {(result.pixCode ?? result.pix?.qrcode ?? result.pix?.copyPaste) && <p className="break-all"><span className="text-zinc-500">Código PIX:</span> {result.pixCode ?? result.pix?.qrcode ?? result.pix?.copyPaste}</p>}
             </div>
             <Button className="w-full" onClick={onClose}>Fechar</Button>
           </div>
@@ -181,9 +195,9 @@ export default function HashAdminGateway() {
   const paidTxs    = txs.filter(isPaid);
   const waitingTxs = txs.filter(isWaiting);
   const failedTxs  = txs.filter(isFailed);
-  const paidVolume    = paidTxs.reduce((s, t) => s + t.amount, 0);
-  const paidLiquido   = paidTxs.reduce((s, t) => s + (t.fee?.netAmount ?? t.amount), 0);
-  const waitingVolume = waitingTxs.reduce((s, t) => s + t.amount, 0);
+  const paidVolume    = paidTxs.reduce((s, t) => s + txAmountCents(t), 0);
+  const paidLiquido   = paidTxs.reduce((s, t) => s + (t.fee?.netAmount ?? txAmountCents(t)), 0);
+  const waitingVolume = waitingTxs.reduce((s, t) => s + txAmountCents(t), 0);
 
   // Busca: todos os clientes ou cliente específico
   const load = useCallback(async () => {
@@ -216,17 +230,17 @@ export default function HashAdminGateway() {
         targets.map(async ({ label, key }) => {
           const headers: Record<string, string> = {};
           if (key) headers['X-Gateway-Key'] = key;
-          const res = await fetch(`${base}/fastsoft/transactions`, { headers });
+          const res = await fetch(`${base}/koliseu/payments`, { headers });
           const json: ApiResponse = await res.json();
           if (!res.ok) throw new Error(json.error ?? `Erro ${res.status} (${label})`);
-          return (json.data ?? []).map((tx) => ({ ...tx, _clientLabel: label }));
+          return (json.data ?? json.payments ?? []).map((tx) => ({ ...tx, _clientLabel: label }));
         }),
       );
 
       // Mescla e ordena por data desc
       const merged = results.flat().sort((a, b) => {
-        const da = a.createdAt ?? '';
-        const db = b.createdAt ?? '';
+        const da = txCreatedAt(a) ?? '';
+        const db = txCreatedAt(b) ?? '';
         return db.localeCompare(da);
       });
       setAllTxs(merged);
@@ -261,8 +275,8 @@ export default function HashAdminGateway() {
         <div className="flex items-start gap-3">
           <CreditCard className="mt-1 h-7 w-7 shrink-0 text-zinc-400" />
           <div>
-            <h1 className="font-display text-2xl font-bold text-white md:text-3xl">Fluxxo Pay</h1>
-            <p className="mt-1 text-sm text-zinc-400">Transações PIX direto da API do gateway.</p>
+            <h1 className="font-display text-2xl font-bold text-white md:text-3xl">Koliseu</h1>
+            <p className="mt-1 text-sm text-zinc-400">Pagamentos PIX direto da API Koliseu.</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -347,7 +361,7 @@ export default function HashAdminGateway() {
       {/* Erro */}
       {error && (
         <div className="mb-4 rounded-xl border border-red-800 bg-red-950/60 p-4 text-sm text-red-300">
-          <p className="font-semibold">Erro ao consultar Fluxxo Pay</p>
+          <p className="font-semibold">Erro ao consultar Koliseu</p>
           <p className="mt-1 font-mono text-xs text-red-400">{error}</p>
         </div>
       )}
@@ -396,12 +410,12 @@ export default function HashAdminGateway() {
                     <p className="text-xs text-zinc-500 font-mono">{txDoc(tx)}</p>
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
-                  <td className="px-4 py-3 text-right font-semibold text-white tabular-nums">{fmtBrl(tx.amount)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-white tabular-nums">{fmtBrl(txAmountCents(tx))}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-emerald-400">
                     {tx.fee?.netAmount != null ? fmtBrl(tx.fee.netAmount) : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-zinc-400">{fmtDate(tx.createdAt)}</td>
-                  <td className="px-4 py-3 text-xs text-zinc-400">{fmtDate(tx.paidAt)}</td>
+                  <td className="px-4 py-3 text-xs text-zinc-400">{fmtDate(txCreatedAt(tx))}</td>
+                  <td className="px-4 py-3 text-xs text-zinc-400">{fmtDate(txPaidAt(tx))}</td>
                 </tr>
               ))}
             </tbody>

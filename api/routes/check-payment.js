@@ -1,5 +1,7 @@
 const { getSupabaseAdmin } = require('../lib/supabase');
 
+const KOLISEU_BASE = 'https://www.koliseu.cloud';
+
 async function checkPayment(req, res) {
   try {
     const { orderId } = req.params;
@@ -8,24 +10,22 @@ async function checkPayment(req, res) {
     const supabase = getSupabaseAdmin();
     const { data: order, error: dbErr } = await supabase
       .from('orders')
-      .select('id, fastsoft_transaction_id, payment_status')
+      .select('id, koliseu_payment_id, payment_status')
       .eq('id', orderId)
       .single();
 
     if (dbErr || !order) return res.status(404).json({ error: 'Pedido não encontrado' });
     if (order.payment_status === 'paid') return res.json({ status: 'paid', updated: false });
-    if (!order.fastsoft_transaction_id) return res.status(400).json({ error: 'Sem ID de transação FastSoft' });
+    if (!order.koliseu_payment_id) return res.status(400).json({ error: 'Sem ID de pagamento Koliseu' });
 
-    const FASTSOFT_SECRET_KEY = process.env.FASTSOFT_SECRET_KEY;
-    if (!FASTSOFT_SECRET_KEY) throw new Error('FASTSOFT_SECRET_KEY not configured');
-
-    const tokenBase64 = Buffer.from(`x:${FASTSOFT_SECRET_KEY}`).toString('base64');
+    const KOLISEU_API_KEY = process.env.KOLISEU_API_KEY;
+    if (!KOLISEU_API_KEY) throw new Error('KOLISEU_API_KEY not configured');
 
     const txRes = await fetch(
-      `https://api.fastsoftbrasil.com/api/user/transactions/${order.fastsoft_transaction_id}`,
+      `${KOLISEU_BASE}/api/v1/pix/payments/${order.koliseu_payment_id}`,
       {
         headers: {
-          'Authorization': `Basic ${tokenBase64}`,
+          'x-api-key': KOLISEU_API_KEY,
           'Accept': 'application/json',
         },
       }
@@ -33,17 +33,17 @@ async function checkPayment(req, res) {
 
     if (!txRes.ok) {
       const errData = await txRes.json().catch(() => ({}));
-      console.error('FastSoft check error:', errData);
-      return res.status(502).json({ error: 'Erro ao consultar FastSoft', details: errData });
+      console.error('Koliseu check error:', errData);
+      return res.status(502).json({ error: 'Erro ao consultar Koliseu', details: errData });
     }
 
     const txData = await txRes.json();
-    const tx = txData.data || txData;
+    const tx = txData.data ?? txData.payment ?? txData;
     const txStatus = (tx.status || '').toUpperCase();
 
-    console.log(`Check payment order=${orderId} tx=${order.fastsoft_transaction_id} status=${txStatus}`);
+    console.log(`Check payment order=${orderId} koliseu_id=${order.koliseu_payment_id} status=${txStatus}`);
 
-    if (txStatus === 'PAID' || txStatus === 'APPROVED') {
+    if (txStatus === 'PAID' || txStatus === 'APPROVED' || txStatus === 'COMPLETED') {
       await supabase
         .from('orders')
         .update({

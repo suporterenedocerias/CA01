@@ -4,10 +4,7 @@ const PUSHCUT_URL = 'https://api.pushcut.io/G7TVP0BQZvdZeVlNdxBpM/notifications/
 
 async function notifyPushcut({ title, message, amount }) {
   try {
-    const body = {
-      title,
-      text: message,
-    };
+    const body = { title, text: message };
     if (amount) body.sound = 'cash';
     await fetch(PUSHCUT_URL, {
       method: 'POST',
@@ -24,54 +21,37 @@ function fmtBrl(centavos) {
   return `R$ ${(centavos / 100).toFixed(2).replace('.', ',')}`;
 }
 
-async function fastsoftWebhook(req, res) {
+async function koliseuWebhook(req, res) {
   try {
     const body = req.body;
-    console.log('FastSoft Webhook received:', JSON.stringify(body));
+    console.log('Koliseu Webhook received:', JSON.stringify(body));
 
-    const transactionData = body.data;
+    // Suporta { data: {...} } ou root direto
+    const payment = body.data ?? body.payment ?? body;
 
-    if (transactionData && transactionData.status?.toUpperCase() === 'PAID') {
-      // Parse metadata (pode vir como string)
-      let metadata = {};
-      try {
-        metadata = typeof transactionData.metadata === 'string'
-          ? JSON.parse(transactionData.metadata)
-          : transactionData.metadata;
-      } catch (e) {
-        console.error('Metadata parse error:', e);
+    const status = (payment?.status || '').toUpperCase();
+    const paymentId = payment?.id;
+
+    if (paymentId && (status === 'PAID' || status === 'APPROVED' || status === 'COMPLETED')) {
+      const supabase = getSupabaseAdmin();
+
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          payment_status: 'paid',
+          status: 'pago',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('koliseu_payment_id', paymentId);
+
+      if (error) {
+        console.error('DB update error:', error);
+        throw error;
       }
 
-      const transactionId = transactionData.id;
+      console.log('Order updated to paid for koliseu_payment_id:', paymentId);
 
-      // Dados para a notificação
-      const nome   = transactionData.items?.[0]?.title
-                  || transactionData.customer?.name
-                  || 'Cliente';
-      const valor  = transactionData.fee?.netAmount ?? transactionData.amount ?? 0;
-      const bruto  = transactionData.amount ?? 0;
-
-      if (transactionId) {
-        const supabase = getSupabaseAdmin();
-
-        const { error } = await supabase
-          .from('orders')
-          .update({
-            payment_status: 'paid',
-            status: 'pago',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('fastsoft_transaction_id', transactionId);
-
-        if (error) {
-          console.error('DB update error:', error);
-          throw error;
-        }
-
-        console.log('Order updated to paid for transaction:', transactionId);
-      }
-
-      // Notifica Pushcut
+      const bruto = payment?.amountCents ?? payment?.amount ?? 0;
       await notifyPushcut({
         title: 'Venda Aprovada no Pix',
         message: `Valor ${fmtBrl(bruto)}`,
@@ -87,4 +67,4 @@ async function fastsoftWebhook(req, res) {
   }
 }
 
-module.exports = { fastsoftWebhook };
+module.exports = { koliseuWebhook };

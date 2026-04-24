@@ -38,6 +38,11 @@ const menuSections = [
     items: [
       { label: 'Tamanhos', icon: Package, path: '/admin/sizes' },
       { label: 'Ofertas', icon: Tag, path: '/admin/offers' },
+    ],
+  },
+  {
+    label: 'Checkout & Gateway',
+    items: [
       { label: 'Páginas', icon: FileText, path: '/admin/custom-pages' },
     ],
   },
